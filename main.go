@@ -15,7 +15,10 @@ func getBranches() ([]string, error) {
 	branches := strings.Split(string(output), "\n")
 
 	for i, branch := range branches {
-		branches[i] = strings.Replace(branch, "*", "", -1)
+		b := strings.Replace(branch, "*", "", -1)
+		b = strings.TrimSpace(b)
+
+		branches[i] = b
 	}
 
 	return branches, err
@@ -146,22 +149,16 @@ func main() {
 		return
 	}
 
-	fmt.Println()
-	fmt.Printf("Creating branch: feature/%s\n", selectedIssue.BranchName)
-
 	branch := fmt.Sprintf("feature/%s", selectedIssue.BranchName)
-
+	fmt.Println("Branch name:", branch)
 	exists := includes(branches, branch)
 
 	if exists {
-		err = run.Git("checkout", branch).RunInTerminal()
+		fmt.Println("Branch already exists. Switching to it.")
+		run.Git("checkout", branch).RunInTerminal()
 	} else {
-		err = run.Git("checkout", "-b", branch).RunInTerminal()
-	}
-
-	if err != nil {
-		fmt.Println("Error during checkout:", err)
-		return
+		fmt.Println("Branch does not exist. Creating it.")
+		run.Git("checkout", "-b", branch).RunInTerminal()
 	}
 }
 
