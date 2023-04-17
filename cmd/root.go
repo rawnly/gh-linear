@@ -189,7 +189,7 @@ var rootCmd = &cobra.Command{
 			return err
 		}
 
-		branch := fmt.Sprintf("feature/%s", selectedIssue.BranchName)
+		branch := selectedIssue.BranchName
 
 		if slice.Includes(branches, branch) {
 			return run.Git("checkout", branch).RunInTerminal()
