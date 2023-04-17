@@ -33,7 +33,6 @@ func NewClient() *LinearClient {
 
 func (c *LinearClient) Query(query interface{}, variables map[string]interface{}, options ...graphql.Option) error {
 	err := c.client.Query(context.Background(), query, variables, options...)
-
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -49,6 +48,7 @@ type MeQuery struct {
 	}
 }
 
+// GetMe returns the current user
 func (c *LinearClient) GetMe() (*MeQuery, error) {
 	var query MeQuery
 
@@ -66,6 +66,7 @@ type IssueQuery struct {
 	} `grapqhl:"issue(id: $id)"`
 }
 
+// GetIssue returns the issue with the given id
 func (c *LinearClient) GetIssue(issueId string) (*IssueQuery, error) {
 	var query IssueQuery
 
@@ -86,6 +87,10 @@ type Issue struct {
 		Name string
 		Type string
 	}
+}
+
+func (i *Issue) String() string {
+	return fmt.Sprintf("[%s] %s", i.Identifier, i.Title)
 }
 
 type TeamIssues struct {
@@ -109,7 +114,8 @@ type IssueFilter struct {
 	Or    []IssueFilter `json:"or"`
 }
 
-func (c *LinearClient) GetIssues(teamId string) (*TeamIssues, error) {
+// GetIssues returns all issues for the given team
+func (c *LinearClient) GetIssues(teamId string) (*[]Issue, error) {
 	var query TeamIssues
 
 	variables := map[string]interface{}{
@@ -136,7 +142,7 @@ func (c *LinearClient) GetIssues(teamId string) (*TeamIssues, error) {
 
 	err := c.client.Query(context.Background(), &query, variables)
 
-	return &query, err
+	return &query.Team.Issues.Nodes, err
 }
 
 type Team struct {
@@ -156,10 +162,13 @@ type Teams struct {
 	}
 }
 
+var teamCacheTTL int64 = 60 * 12
+
+// GetTeams returns all teams assciated to the  current user
 func (c *LinearClient) GetTeams() (*Teams, error) {
 	var query Teams
 
-	err := c.Query(&query, nil)
+	err := c.client.Query(context.Background(), &query, nil)
 
 	return &query, err
 }
