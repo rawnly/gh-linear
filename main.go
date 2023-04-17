@@ -3,26 +3,57 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/Rawnly/gh-linear/linear"
 	"github.com/rawnly/gitgud/run"
 )
 
+func getBranches() ([]string, error) {
+	output, err := run.Git("branch").Output()
+	branches := strings.Split(string(output), "\n")
+
+	for i, branch := range branches {
+		branches[i] = strings.Replace(branch, "*", "", -1)
+	}
+
+	return branches, err
+}
+
+func includes(branches []string, branch string) bool {
+	for _, b := range branches {
+		if b == branch {
+			return true
+		}
+	}
+
+	return false
+}
+
 func main() {
 	linearClient := linear.NewClient()
 
-	indicator := NewSpinner("Loading user...")
+	indicator := NewSpinner("Preparing...")
 	indicator.Spinner.Start()
 
-	me, err := linearClient.GetMe()
+	branches, err := getBranches()
 
 	if err != nil {
-		indicator.Fail("Error loading user.")
+		indicator.Fail("Error loading branches.")
 		return
 	}
 
-	indicator.Succeed("Welcome " + me.Viewer.Name + "!")
+	indicator.Spinner.Stop()
+
+	// me, err := linearClient.GetMe()
+	//
+	// if err != nil {
+	// 	indicator.Fail("Error loading user.")
+	// 	return
+	// }
+	//
+	// indicator.Succeed("Welcome " + me.Viewer.Name + "!")
 
 	indicator = NewSpinner("Loading teams...")
 	indicator.Spinner.Start()
@@ -120,10 +151,16 @@ func main() {
 
 	branch := fmt.Sprintf("feature/%s", selectedIssue.BranchName)
 
-	err = run.Git("checkout", "-b", branch).RunInTerminal()
+	exists := includes(branches, branch)
+
+	if exists {
+		err = run.Git("checkout", branch).RunInTerminal()
+	} else {
+		err = run.Git("checkout", "-b", branch).RunInTerminal()
+	}
 
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("Error during checkout:", err)
 		return
 	}
 }
