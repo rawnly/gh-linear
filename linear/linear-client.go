@@ -57,26 +57,6 @@ func (c *LinearClient) GetMe() (*MeQuery, error) {
 	return &query, err
 }
 
-type IssueQuery struct {
-	Issue struct {
-		Id          string
-		Title       string
-		Description string
-		BranchName  string
-	} `grapqhl:"issue(id: $id)"`
-}
-
-// GetIssue returns the issue with the given id
-func (c *LinearClient) GetIssue(issueId string) (*IssueQuery, error) {
-	var query IssueQuery
-
-	err := c.client.Query(context.Background(), &query, map[string]interface{}{
-		"id": graphql.String(issueId),
-	})
-
-	return &query, err
-}
-
 type Issue struct {
 	Id         string
 	Identifier string
@@ -91,6 +71,27 @@ type Issue struct {
 
 func (i *Issue) String() string {
 	return fmt.Sprintf("[%s] %s", i.Identifier, i.Title)
+}
+
+type IssueQuery struct {
+	Issue struct {
+		Id string
+	} `graphql:"issue(id: $issueId)"`
+}
+
+// GetIssue returns the issue with the given id
+func (c *LinearClient) GetIssue(issueId string) (*Issue, error) {
+	var query struct {
+		Issue Issue `graphql:"issue(id: $issueId)"`
+	}
+
+	variables := map[string]interface{}{
+		"issueId": issueId,
+	}
+
+	err := c.client.Query(context.Background(), &query, variables)
+
+	return &query.Issue, err
 }
 
 type TeamIssues struct {

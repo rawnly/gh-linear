@@ -124,51 +124,89 @@ var rootCmd = &cobra.Command{
 			return initProject(linear, wd)
 		}
 
-		spinner := utils.NewSpinner("Fetching issues...")
+		// read the --issue flag
+		issueId, err := cmd.Flags().GetString("issue")
+
+		prompt := "Loading issues..."
+
+		if issueId != "" {
+			prompt = "Loading issue..."
+		}
+
+		spinner := utils.NewSpinner(prompt)
 		spinner.Start()
 
-		issues, err := linear.GetIssues(project.TeamID)
-		if err != nil {
-			return err
+		var selectedIssue *linearSdk.Issue
+		if issueId != "" {
+			issue, err := linear.GetIssue(issueId)
+			if err != nil {
+				return err
+			}
+
+			selectedIssue = issue
+
+			spinner.Succeed(fmt.Sprintf("Loaded issue: %s", issue.Identifier))
+		} else {
+			issues, err := linear.GetIssues(project.TeamID)
+			if err != nil {
+				return err
+			}
+
+			issueCount := 0
+
+			if issues != nil {
+				issueCount = len(*issues)
+			}
+
+			spinner.Succeed(fmt.Sprintf("Loaded %d issues", issueCount))
+
+			var issue string
+			survey.AskOne(&survey.Select{
+				Message: "Choose an issue:",
+				VimMode: true,
+				Options: slice.Map(*issues, func(issue linearSdk.Issue) string {
+					return issue.String()
+				}),
+				Description: func(value string, index int) string {
+					return (*issues)[index].BranchName
+				},
+			}, &issue)
+
+			for _, i := range *issues {
+				if i.String() == issue {
+					selectedIssue = &i
+				}
+			}
 		}
 
-		issueCount := 0
-
-		if issues != nil {
-			issueCount = len(*issues)
+		if selectedIssue == nil {
+			spinner.Fail("Invalid issue selected.")
+			return nil
 		}
-
-		spinner.Succeed(fmt.Sprintf("Loaded %d issues", issueCount))
-
-		var issue string
-		survey.AskOne(&survey.Select{
-			Message: "Choose an issue:",
-			VimMode: true,
-			Options: slice.Map(*issues, func(issue linearSdk.Issue) string {
-				return issue.String()
-			}),
-			Description: func(value string, index int) string {
-				return (*issues)[index].BranchName
-			},
-		}, &issue)
 
 		branches, err := git.GetBranches()
 		if err != nil {
 			return err
 		}
 
-		var selectedIssue *linearSdk.Issue
-		for _, i := range *issues {
-			if i.String() == issue {
-				selectedIssue = &i
-			}
-		}
-
 		branch := fmt.Sprintf("feature/%s", selectedIssue.BranchName)
 
 		if slice.Includes(branches, branch) {
-			fmt.Println("Branch already exists. Checking out...")
 			return run.Git("checkout", branch).RunInTerminal()
+		}
+
+		should_continue := false
+
+		if err = survey.AskOne(&survey.Confirm{
+			Message: fmt.Sprintf("Do you want to create the branch %s?", branch),
+			Default: false,
+		}, &should_continue); err != nil {
+			return err
+		}
+
+		if !should_continue {
+			fmt.Println("Operation aborted.")
+			return nil
 		}
 
 		return run.Git("checkout", "-b", branch).RunInTerminal()
