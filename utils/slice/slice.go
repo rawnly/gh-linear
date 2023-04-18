@@ -61,3 +61,13 @@ func Includes[T comparable](slice []T, value T) bool {
 
 	return false
 }
+
+func Find[T any](slice []T, f func(T) bool) (*T, bool) {
+	for _, k := range slice {
+		if f(k) {
+			return &k, true
+		}
+	}
+
+	return nil, false
+}

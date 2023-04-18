@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"time"
 
 	"github.com/Rawnly/gh-linear/linear"
@@ -25,9 +26,23 @@ func (c *CachedTeams) Set(teams []linear.Team) {
 	c.Data = teams
 }
 
+type ProjectsHashMap map[string]*Project
+
 type Config struct {
-	Projects map[string]*Project `json:"projects"`
-	Teams    CachedTeams         `json:"teams"`
+	Projects ProjectsHashMap         `json:"projects"`
+	Teams    map[string]*CachedTeams `json:"teams"`
+}
+
+func (c *Config) GetProject(wd string) *Project {
+	k := strings.ToLower(wd)
+
+	return c.Projects[k]
+}
+
+func (c *Config) SetProject(wd string, project *Project) {
+	k := strings.ToLower(wd)
+
+	c.Projects[k] = project
 }
 
 func (c *Config) Update() {
@@ -38,15 +53,13 @@ func (c *Config) Update() {
 type Project struct {
 	TeamID  string `json:"teamId"`
 	WorkDir string `json:"workdir"`
+	ApiKey  string `json:"apiKey"`
 }
 
 func LoadDefaults() (Config, error) {
 	config := Config{
 		Projects: make(map[string]*Project),
-		Teams: CachedTeams{
-			LastFetch: -1,
-			Data:      nil,
-		},
+		Teams:    make(map[string]*CachedTeams),
 	}
 
 	viper.SetDefault("teams", config.Teams)

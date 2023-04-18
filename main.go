@@ -5,6 +5,7 @@ import (
 
 	cmd "github.com/Rawnly/gh-linear/cmd"
 	cfg "github.com/Rawnly/gh-linear/config"
+	"github.com/Rawnly/gh-linear/linear"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -43,8 +44,18 @@ func init() {
 }
 
 func main() {
+	linearClient := linear.NewClient()
 	logrus.SetLevel(logrus.DebugLevel)
 
+	config, err := cfg.Load()
+	if err != nil {
+		logrus.Fatal(err)
+		return
+	}
+
 	ctx := context.Background()
+	ctx = context.WithValue(ctx, "linear", linearClient)
+	ctx = context.WithValue(ctx, "config", &config)
+
 	cmd.Execute(ctx)
 }

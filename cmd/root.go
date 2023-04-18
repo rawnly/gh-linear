@@ -8,6 +8,8 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/MakeNowJust/heredoc"
+	"github.com/Rawnly/gh-linear/cmd/project"
+	"github.com/Rawnly/gh-linear/cmd/shared"
 	linearSdk "github.com/Rawnly/gh-linear/linear"
 	"github.com/Rawnly/gh-linear/utils"
 	"github.com/rawnly/gitgud/run"
@@ -18,74 +20,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func initProject(linear *linearSdk.LinearClient, dir string) error {
-	conf, err := config.Load()
-	if err != nil {
-		return err
-	}
-
-	var teams []linearSdk.Team
-
-	if conf.Teams.IsExpired() {
-		t, err := linear.GetTeams()
-		if err != nil {
-			return err
-		}
-
-		teams = t.Teams.Nodes
-
-		conf.Teams.Set(teams)
-		conf.Update()
-
-		if err = conf.Save(); err != nil {
-			return err
-		}
-	} else {
-		teams = conf.Teams.Data
-	}
-
-	var team string
-	err = survey.AskOne(&survey.Select{
-		Message: "Choose a team:",
-		Options: slice.Map(teams, func(team linearSdk.Team) string { return team.Name }),
-		Help:    "This project will be associated with the selected team.",
-		VimMode: true,
-	}, &team)
-
-	if err != nil {
-		return err
-	}
-
-	var project *config.Project = &config.Project{
-		WorkDir: dir,
-	}
-
-	for _, t := range teams {
-		if t.Name == team {
-			project.TeamID = t.Id
-		}
-	}
-
-	if project.TeamID == "" {
-		return utils.NewError("Invalid team selected.")
-	}
-
-	if conf.Projects == nil {
-		conf.Projects = make(map[string]*config.Project)
-	}
-
-	conf.Projects[dir] = project
-	conf.Update()
-
-	if err := conf.Save(); err != nil {
-		return err
-	}
-
-	fmt.Println("Project created successfully.")
-
-	return nil
-}
-
 var rootCmd = &cobra.Command{
 	Use:   "gh-linear",
 	Short: "gh-linear is a tool to help you create new branches from Linear issues",
@@ -95,18 +29,17 @@ var rootCmd = &cobra.Command{
     $ gh linear
   `),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		linear := linearSdk.NewClient()
-		conf, err := config.Load()
-		if err != nil {
-			return err
-		}
+		ctx := cmd.Context()
+
+		linear := ctx.Value("linear").(*linearSdk.LinearClient)
+		conf := ctx.Value("config").(*config.Config)
 
 		wd, err := os.Getwd()
-		wd = strings.ToLower(wd)
 		if err != nil {
 			return err
 		}
 
+		wd = strings.ToLower(wd)
 		project := conf.Projects[wd]
 
 		if len(conf.Projects) == 0 || project == nil {
@@ -121,8 +54,10 @@ var rootCmd = &cobra.Command{
 				return utils.NewError("Operation aborted.")
 			}
 
-			return initProject(linear, wd)
+			return shared.InitProject(ctx, wd)
 		}
+
+		linear.SetKey(project.ApiKey)
 
 		// read the --issue flag
 		issueId, err := cmd.Flags().GetString("issue")
@@ -215,6 +150,7 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.Flags().StringP("issue", "i", "", "The issue identifier")
+	rootCmd.AddCommand(project.Cmd)
 }
 
 func Execute(ctx context.Context) {

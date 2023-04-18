@@ -11,8 +11,10 @@ type Spinner struct {
 	spinner *spinner.Spinner
 }
 
-var spinnerIdx = 39
-var spinnerSpeed time.Duration = 200
+var (
+	spinnerIdx                 = 39
+	spinnerSpeed time.Duration = 200
+)
 
 func NewSpinner(text string) Spinner {
 	s := spinner.New(spinner.CharSets[spinnerIdx], spinnerSpeed*time.Millisecond)
@@ -34,5 +36,9 @@ func (s *Spinner) Fail(message string) {
 
 func (s *Spinner) Succeed(message string) {
 	s.spinner.FinalMSG = fmt.Sprintf("%s\n", message)
+	s.spinner.Stop()
+}
+
+func (s *Spinner) Stop() {
 	s.spinner.Stop()
 }

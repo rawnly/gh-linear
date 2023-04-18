@@ -9,10 +9,10 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func NewGraphqlClient() *graphql.Client {
+func NewGraphqlClient(key string) *graphql.Client {
 	src := oauth2.StaticTokenSource(
 		&oauth2.Token{
-			AccessToken: os.Getenv("LINEAR_API_KEY"),
+			AccessToken: key,
 		},
 	)
 
@@ -27,8 +27,12 @@ type LinearClient struct {
 
 func NewClient() *LinearClient {
 	return &LinearClient{
-		client: NewGraphqlClient(),
+		client: NewGraphqlClient(os.Getenv("LINEAR_API_KEY")),
 	}
+}
+
+func (c *LinearClient) SetKey(key string) {
+	c.client = NewGraphqlClient(key)
 }
 
 func (c *LinearClient) Query(query interface{}, variables map[string]interface{}, options ...graphql.Option) error {
