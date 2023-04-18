@@ -110,6 +110,7 @@ var rootCmd = &cobra.Command{
 			for _, i := range *issues {
 				if i.String() == issue {
 					selectedIssue = &i
+					break
 				}
 			}
 		}
