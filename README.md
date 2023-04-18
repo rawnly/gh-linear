@@ -5,13 +5,13 @@
 ## Installation
 
 ```
-  gh extension install rawnly/gh-linear
+  gh extensions install rawnly/gh-linear
 ```
 
 Upgrade:
 
 ```
-  gh extension upgrade rawnly/gh-linear
+  gh extensions upgrade rawnly/gh-linear
 ```
 
 ## Usage
