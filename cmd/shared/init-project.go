@@ -32,7 +32,7 @@ func InitProject(ctx context.Context, projectKey string) error {
 
 	var teams []linearSdk.Team
 
-	teamsCache := conf.Teams[projectKey]
+	teamsCache := conf.Teams[apiKey]
 
 	if teamsCache == nil {
 		teamsCache = &config.CachedTeams{
@@ -50,7 +50,12 @@ func InitProject(ctx context.Context, projectKey string) error {
 		teams = t.Teams.Nodes
 
 		teamsCache.Set(teams)
-		conf.Teams[projectKey] = teamsCache
+
+		if conf.Teams == nil {
+			conf.Teams = make(map[string]*config.CachedTeams)
+		}
+
+		conf.Teams[apiKey] = teamsCache
 		conf.Update()
 
 		if err = conf.Save(); err != nil {
