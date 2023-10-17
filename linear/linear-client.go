@@ -3,22 +3,42 @@ package linear
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 
 	graphql "github.com/hasura/go-graphql-client"
-	"golang.org/x/oauth2"
 )
 
+// @see https://stackoverflow.com/questions/54088660/add-headers-for-each-http-request-using-client
+type transport struct {
+	headers map[string]string
+	base    http.RoundTripper
+}
+
+func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
+	for k, v := range t.headers {
+		req.Header.Add(k, v)
+	}
+
+	base := t.base
+
+	if base == nil {
+		base = http.DefaultTransport
+	}
+
+	return base.RoundTrip(req)
+}
+
 func NewGraphqlClient(key string) *graphql.Client {
-	src := oauth2.StaticTokenSource(
-		&oauth2.Token{
-			AccessToken: key,
+	client := &http.Client{
+		Transport: &transport{
+			headers: map[string]string{
+				"Authorization": key,
+			},
 		},
-	)
+	}
 
-	httpClient := oauth2.NewClient(context.Background(), src)
-
-	return graphql.NewClient("https://api.linear.app/graphql", httpClient)
+	return graphql.NewClient("https://api.linear.app/graphql", client)
 }
 
 type LinearClient struct {
