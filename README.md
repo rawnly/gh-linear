@@ -21,15 +21,23 @@ gh-linear is a tool to help you create new branches from Linear issues
 
 Usage:
   gh-linear [flags]
+  gh-linear [command]
 
 Examples:
 $ gh linear --issue <IDENTIFIER>
 $ gh linear
 
 
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+  project     Manage projects
+
 Flags:
   -h, --help           help for gh-linear
   -i, --issue string   The issue identifier
+
+Use "gh-linear [command] --help" for more information about a command.
 ```
 
 ## Setup
