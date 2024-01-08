@@ -139,6 +139,25 @@ type IssueFilter struct {
 	Or    []IssueFilter `json:"or"`
 }
 
+// Refer in the docs as `Organization`
+type Workspace struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// GetWorkspace returns the current user's workspace
+func (c *LinearClient) GetWorkspace() (*Workspace, error) {
+	var query struct {
+		Organization Workspace `graphql:"organization"`
+	}
+
+	if err := c.client.Query(context.Background(), &query, nil); err != nil {
+		return nil, err
+	}
+
+	return &query.Organization, nil
+}
+
 // GetIssues returns all issues for the given team
 func (c *LinearClient) GetIssues(teamId string) (*[]Issue, error) {
 	var query TeamIssues
@@ -165,9 +184,11 @@ func (c *LinearClient) GetIssues(teamId string) (*[]Issue, error) {
 		},
 	}
 
-	err := c.client.Query(context.Background(), &query, variables)
+	if err := c.client.Query(context.Background(), &query, variables); err != nil {
+		return nil, err
+	}
 
-	return &query.Team.Issues.Nodes, err
+	return &query.Team.Issues.Nodes, nil
 }
 
 type Team struct {
@@ -193,7 +214,9 @@ var teamCacheTTL int64 = 60 * 12
 func (c *LinearClient) GetTeams() (*Teams, error) {
 	var query Teams
 
-	err := c.client.Query(context.Background(), &query, nil)
+	if err := c.client.Query(context.Background(), &query, nil); err != nil {
+		return nil, err
+	}
 
-	return &query, err
+	return &query, nil
 }
